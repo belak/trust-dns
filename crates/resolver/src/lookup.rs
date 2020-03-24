@@ -232,21 +232,14 @@ impl<C: DnsHandle + 'static> LookupFuture<C> {
     /// * `client_cache` - cache with a connection to use for performing all lookups
     #[doc(hidden)]
     pub fn lookup(
-        mut names: Vec<Name>,
+        names: Vec<Name>,
         record_type: RecordType,
         options: DnsRequestOptions,
-        mut client_cache: CachingClient<C>,
+        client_cache: CachingClient<C>,
     ) -> Self {
-        let name = names.pop().ok_or_else(|| {
-            ResolveError::from(ResolveErrorKind::Message("can not lookup for no names"))
-        });
-
-        let query: Pin<Box<dyn Future<Output = Result<Lookup, ResolveError>> + Send>> = match name {
-            Ok(name) => client_cache
-                .lookup(Query::query(name, record_type), options.clone())
-                .boxed(),
-            Err(err) => future::err(err).boxed(),
-        };
+        // if there are no names to query this error will be returned
+        let err = ResolveError::from(ResolveErrorKind::Message("can not lookup for no names"));
+        let query = future::err(err).boxed();
 
         LookupFuture {
             client_cache,
